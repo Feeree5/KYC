@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نموذج الاشتراك</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+      background-color: black;
+    }
+    input, select, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      display: none;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    label, h2 {
+      color: white;
+    }
+    
+   select#time option {
+      color: blue;
+    }
+.text{
+color:white;
+}
+
+  </style>
+</head>
+<body>
+  <center><h2>إحجز الآن</h2></center>
+  <form id="subscriptionForm" method="post" name="contact-form">
+    <label for="name">الاسم:</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="phone">رقم الموبايل:</label>
+    <input type="text" id="phone" name="phone" required>
+
+    <label for="date">التاريخ:</label>
+    <input type="date" id="date" name="date" required>
+
+    <label for="time">موعد المباراة:</label>
+    <select id="time" name="time" required>
+      <option value="" selected disabled>اختر موعد</option>
+    </select>
+    
+    <label for="code">كود الدفع:</label>
+    <input type="text" id="code" name="code" required>
+
+    <button id="submitButton1" type="submit">إرسال</button>
+  </form>
+
+<div class="text">
+
+  - استخدم محفظة اتصالات كاش للدفع
+<br>- رقم المحفظة 01102561700
+<br>- مبلغ الدفع 45 جنيه<br>
+- بعد الدفع احفظ رقم العملية او رقم الضريبة وادخله فى خانة كود الدفع ↑
+</div>
+
+  <script>
+  // ✅ إرسال البيانات إلى Google Sheets
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("subscriptionForm");
+    const submitButton = document.getElementById("submitButton1");
+
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbz0x-FSNiI3qixZ_nNY-HKiTPtDgl4OY4Ic3eIC6A6xPQI9rsRwHSZugBd5JT1FFh0/exec';
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+// توحيد تنسيق التاريخ المرسل
+const dateInput = form.querySelector('input[name="date"]');
+if (dateInput) {
+  const rawDate = new Date(dateInput.value);
+  const yyyy = rawDate.getFullYear();
+  const mm = String(rawDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(rawDate.getDate()).padStart(2, '0');
+  dateInput.value = `${yyyy}-${mm}-${dd}`; // yyyy-mm-dd
+}
+
+      submitButton.disabled = true;
+      submitButton.textContent = '...جاري الإرسال';
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: new FormData(form)
+      })
+      .then(() => {
+        alert("✅ تم إرسال البيانات بنجاح!");
+        form.reset();
+        document.getElementById("submitButton1").style.display = "none";
+        submitButton.disabled = false;
+        submitButton.textContent = "إرسال";
+
+// بعد ثانيتين من ظهور رسالة النجاح → يوجّه للصفحة الرئيسية
+  setTimeout(function() {
+    window.location.replace("index.html"); // غيّر المسار حسب صفحتك
+  }, 2000);
+
+      })
+      .catch(() => {
+        alert("❌ حدث خطأ أثناء إرسال البيانات.");
+        submitButton.disabled = false;
+        submitButton.textContent = "إرسال";
+      });
+    });
+  });
+  // ✅ قائمة المواعيد المتاحة في كل يوم
+  const timeOptions = [
+    "الساعة 12 ص", "الساعة 7 م", "الساعة 8 م",
+    "الساعة 9 م", "الساعة 10 م", "الساعة 11 م"
+  ];
+
+  // ✅ إعداد الحد الأدنى لحقل التاريخ ليبدأ من اليوم فقط
+  function setMinDate() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const minDate = `${yyyy}-${mm}-${dd}`;
+    const dateInput = document.getElementById("date");
+    dateInput.setAttribute("min", minDate);
+    dateInput.value = ""; // إعادة تعيين الحقل عند تحديث التاريخ
+  }
+
+  // ✅ تحديث الحد الأدنى كل يوم تلقائيًا (عند منتصف الليل)
+  function scheduleMidnightUpdate() {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0); // منتصف الليل
+    const timeUntilMidnight = midnight - now;
+
+    setTimeout(() => {
+      setMinDate(); // تحديث الحد الأدنى
+      scheduleMidnightUpdate(); // إعادة جدولة التحديث لليوم التالي
+    }, timeUntilMidnight);
+  }
+
+  // ✅ إعداد بيانات Google Sheets
+  const API_KEY = "AIzaSyAQSQEankdd5aGSnbcbpLfPI7hW4n082FU";
+  const SHEET_ID = "1yCdsRS8eo0mJiCHGn1oY8khB_szKBAtrIZf5XjrMpzg";
+  const RANGE = "kyc data!C:D";
+
+  // ✅ تحديث قائمة المواعيد عند تغيير التاريخ
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.getElementById("date");
+    const timeSelect = document.getElementById("time");
+
+    dateInput.addEventListener("change", function () {
+      const selectedDate = this.value;
+      timeSelect.innerHTML = '<option value="" selected disabled>اختر موعد</option>';
+
+      const [yyyy, mm, dd] = selectedDate.split("-");
+      const altFormat = `${dd}/${mm}/${yyyy}`; // تنسيق بديل لدعم البيانات من الشيت
+
+      fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`)
+        .then(response => response.json())
+        .then(data => {
+          const rows = data.values || [];
+
+          const reservedTimes = rows
+  .filter(row => {
+    if (!row[0] || !row[1]) return false;
+    const sheetDate = row[0].trim().split(" ")[0]; // استبعاد الوقت إن وُجد
+    return sheetDate === selectedDate || sheetDate === altFormat;
+  })
+  .map(row => row[1].trim());
+          let availableCount = 0;
+          timeOptions.forEach(time => {
+            if (!reservedTimes.includes(time)) {
+              const option = document.createElement("option");
+              option.value = time;
+              option.textContent = time;
+              timeSelect.appendChild(option);
+              availableCount++;
+            }
+          });
+
+          if (availableCount === 0) {
+            const option = document.createElement("option");
+            option.textContent = "لا توجد مواعيد متاحة";
+            option.disabled = true;
+            timeSelect.appendChild(option);
+          }
+        })
+        .catch(error => {
+          console.error("❌ خطأ في جلب البيانات:", error);
+        });
+    });
+
+    // ✅ منع اختيار الأيام السابقة مباشرةً عند تحميل الصفحة
+    setMinDate();
+    scheduleMidnightUpdate();
+  });
+
+  // ✅ إظهار زر الإرسال فقط عند اكتمال الحقول
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("subscriptionForm");
+    const submitButton = document.getElementById("submitButton1");
+
+    function checkInputs() {
+      const inputs = form.querySelectorAll("input[required], select[required]");
+      const allFilled = Array.from(inputs).every(input => input.value.trim() !== "");
+      submitButton.style.display = allFilled ? "block" : "none";
+    }
+
+    form.addEventListener("input", checkInputs);
+    form.addEventListener("change", checkInputs);
+  });
+
+////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////
+</script>
+
+</body>
+</html>
